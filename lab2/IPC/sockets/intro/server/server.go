@@ -4,17 +4,38 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"os"
+	"sync"
 )
+
+func incomingHandler(socket net.Conn) {
+	for {
+		serverMsg, _ := bufio.NewReader(socket).ReadString('\n')
+		fmt.Println("server: ", serverMsg)
+	}
+}
+
+func outgoingHandler(socket net.Conn) {
+	for {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print("Text to send: ")
+		clientMsg, _ := reader.ReadString('\n')
+		writer := bufio.NewWriter(socket)
+		writer.WriteString(clientMsg + "\n")
+		writer.Flush()
+	}
+}
 
 func main() {
 	l, _ := net.Listen("tcp", "127.0.0.1:8000")
 
-	// for {
 	sock, _ := l.Accept()
-	message, _ := bufio.NewReader(sock).ReadString('\n')
-	fmt.Println("client: ", message)
-	// fmt.Fprintf(sock, "hello from server")
-	fmt.Fprintf(sock, "hello from server via bufio\n")
-	sock.Close()
-	// }
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go incomingHandler(sock)
+	go outgoingHandler(sock)
+
+	wg.Wait()
 }
